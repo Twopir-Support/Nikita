@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lwc:
+    name: LWC lint and Jest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run test:unit -- --ci
+
+  apex:
+    name: Apex static analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install PMD
+        run: |
+          curl -sSL -o pmd.zip \
+            https://github.com/pmd/pmd/releases/download/pmd_releases%2F7.7.0/pmd-dist-7.7.0-bin.zip
+          unzip -q pmd.zip
+      - name: Run PMD
+        run: |
+          ./pmd-bin-7.7.0/bin/pmd check \
+            -d force-app/main/default/classes \
+            -R config/pmd-apex-ruleset.xml \
+            -f github --no-progress
+
+  validate:
+    name: Validate against org
+    runs-on: ubuntu-latest
+    # Compiling Apex needs a real org. Without one this job is skipped rather
+    # than failing, so a fork or a contributor without the secret still gets the
+    # lint and Jest signal. Add SFDX_AUTH_URL (from `sf org display --verbose
+    # --json` on the target sandbox) to enable it.
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for org credentials
+        id: creds
+        run: echo "present=${{ secrets.SFDX_AUTH_URL != '' }}" >> "$GITHUB_OUTPUT"
+      - name: Install Salesforce CLI
+        if: steps.creds.outputs.present == 'true'
+        run: npm install -g @salesforce/cli
+      - name: Authenticate
+        if: steps.creds.outputs.present == 'true'
+        run: |
+          printf '%s' "${{ secrets.SFDX_AUTH_URL }}" > auth.txt
+          sf org login sfdx-url -f auth.txt -a ci
+          rm -f auth.txt
+      - name: Validate deploy and run Apex tests
+        if: steps.creds.outputs.present == 'true'
+        run: |
+          sf project deploy start -d force-app -o ci --dry-run \
+            -l RunSpecifiedTests -t LeadQAControllerTest -w 30
+      - name: Note when skipped
+        if: steps.creds.outputs.present != 'true'
+        run: |
+          echo "::notice::SFDX_AUTH_URL is not set, so Apex was not compiled." \
+               "Lint, Jest and PMD still ran."

@@ -7,7 +7,8 @@
         "test": "sfdx-lwc-jest",
         "test:unit": "sfdx-lwc-jest",
         "test:unit:coverage": "sfdx-lwc-jest -- --coverage",
-        "lint": "eslint force-app/main/default/lwc"
+        "lint": "eslint force-app/main/default/lwc",
+        "pmd": "pmd check -d force-app/main/default/classes -R config/pmd-apex-ruleset.xml -f text --no-progress"
     },
     "devDependencies": {
         "@lwc/eslint-plugin-lwc": "^2.0.0",

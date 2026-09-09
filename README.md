@@ -82,10 +82,26 @@ renders read-only and disables both buttons rather than failing at save time.
 ```bash
 npm install
 npm run test:unit   # Jest, 12 tests
-npm run lint
+npm run lint        # ESLint, @salesforce/eslint-config-lwc
+npm run pmd         # Apex static analysis (needs Java 17+)
 ```
 
-Apex tests run in an org: `sf apex run test -n LeadQAControllerTest -r human`.
+Apex tests need a real org: `sf apex run test -n LeadQAControllerTest -r human`.
+
+CI runs lint, Jest and PMD on every push. The Apex compile and test job is
+skipped unless an `SFDX_AUTH_URL` repository secret is set — get one with
+`sf org display --verbose --json` against the target sandbox and read
+`result.sfdxAuthUrl`.
+
+### Known static-analysis deviations
+
+PMD reports `LeadQAController` at a cognitive complexity of 77 against a
+threshold of 50, and `validateRow` at a cyclomatic complexity of 11 against 10.
+Neither is suppressed. The class is cohesive and every method is small — the
+count is the sum of many short methods, not one long one. If it needs to come
+down, the honest fix is to extract the schema introspection (the static
+initialiser and the field maps) into a `LeadQASchema` class, not to raise the
+threshold.
 
 `Lead_Question__mdt` records cannot be inserted in a test, so the controller
 exposes a `@TestVisible mockQuestionConfigs` seam and the tests configure

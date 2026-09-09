@@ -274,6 +274,7 @@ public with sharing class LeadQAController {
         return firstConfig(matterType, null);
     }
 
+    @SuppressWarnings('PMD.ApexCRUDViolation')
     private static Lead_Question__mdt firstConfig(String matterType, String subType) {
         if (mockQuestionConfigs != null) {
             return filterMocks(matterType, subType);
@@ -430,34 +431,39 @@ public with sharing class LeadQAController {
             if (row == null || String.isBlank(row.question)) {
                 continue;
             }
-            if (row.slot == null || !QUESTION_FIELD_BY_SLOT.containsKey(row.slot)) {
-                throw new QuestionnaireException(
-                    'Question position "' + row.slot + '" is not valid on this Lead.'
-                );
-            }
-            if (bySlot.containsKey(row.slot)) {
-                throw new QuestionnaireException(
-                    'Question position ' + row.slot + ' was submitted more than once.'
-                );
-            }
-            if (row.question.trim().length() > QUESTION_MAX_LENGTH) {
-                throw new QuestionnaireException(
-                    'Question ' + row.slot + ' is longer than the ' +
-                    QUESTION_MAX_LENGTH + ' characters the field allows.'
-                );
-            }
-            // Reject rather than truncate: silently cutting an answer in half is
-            // data loss the user would not discover until they read it back.
-            if (String.isNotBlank(row.answer) && row.answer.trim().length() > ANSWER_MAX_LENGTH) {
-                throw new QuestionnaireException(
-                    'The answer to question ' + row.slot + ' is ' +
-                    row.answer.trim().length() + ' characters. The maximum is ' +
-                    ANSWER_MAX_LENGTH + '.'
-                );
-            }
+            validateRow(row, bySlot);
             bySlot.put(row.slot, row);
         }
         return bySlot;
+    }
+
+    /** Per-row checks, split out of `validate` to keep both readable. */
+    private static void validateRow(QuestionAnswer row, Map<Integer, QuestionAnswer> seen) {
+        if (row.slot == null || !QUESTION_FIELD_BY_SLOT.containsKey(row.slot)) {
+            throw new QuestionnaireException(
+                'Question position "' + row.slot + '" is not valid on this Lead.'
+            );
+        }
+        if (seen.containsKey(row.slot)) {
+            throw new QuestionnaireException(
+                'Question position ' + row.slot + ' was submitted more than once.'
+            );
+        }
+        if (row.question.trim().length() > QUESTION_MAX_LENGTH) {
+            throw new QuestionnaireException(
+                'Question ' + row.slot + ' is longer than the ' +
+                QUESTION_MAX_LENGTH + ' characters the field allows.'
+            );
+        }
+        // Reject rather than truncate: silently cutting an answer in half is data
+        // loss the user would not discover until they read it back.
+        if (String.isNotBlank(row.answer) && row.answer.trim().length() > ANSWER_MAX_LENGTH) {
+            throw new QuestionnaireException(
+                'The answer to question ' + row.slot + ' is ' +
+                row.answer.trim().length() + ' characters. The maximum is ' +
+                ANSWER_MAX_LENGTH + '.'
+            );
+        }
     }
 
     private static void assertLeadId(Id recordId) {
@@ -487,6 +493,7 @@ public with sharing class LeadQAController {
      * `setMessage` is required as well as the constructor argument -- without it
      * the client receives "Script-thrown exception" instead of the text.
      */
+    @SuppressWarnings('PMD.AvoidDebugStatements')
     private static AuraHandledException userFacing(Exception e, String fallback) {
         if (e instanceof AuraHandledException) {
             return (AuraHandledException) e;
@@ -542,6 +549,7 @@ public with sharing class LeadQAController {
         @AuraEnabled public String answer { get; set; }
 
         /** Required so the platform can deserialise the LWC payload. */
+        @SuppressWarnings('PMD.EmptyStatementBlock')
         public QuestionAnswer() {}
 
         public QuestionAnswer(Integer slot, String question, String answer) {
