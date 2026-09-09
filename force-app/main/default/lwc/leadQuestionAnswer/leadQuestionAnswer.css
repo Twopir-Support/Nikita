@@ -1,0 +1,104 @@
+/*
+ * Everything here is expressed with SLDS styling hooks so the component
+ * follows the org theme (and Salesforce's dark mode) instead of hard-coding
+ * colours that only look right on the default white background.
+ */
+
+.matter-badge {
+    display: inline-block;
+    padding: 0.0625rem 0.5rem;
+    border-radius: 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 400;
+    vertical-align: middle;
+    color: var(--slds-g-color-brand-base-30, #0176d3);
+    background: var(--slds-g-color-surface-container-2, #f3f3f3);
+    border: 1px solid var(--slds-g-color-border-base-1, #e5e5e5);
+}
+
+.question-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.question-row {
+    padding: 0.75rem 0.5rem;
+    border-left: 3px solid transparent;
+    border-radius: 0.25rem;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.question-row:hover {
+    background: var(--slds-g-color-surface-container-1, #fafaf9);
+}
+
+.question-row_unanswered {
+    border-left-color: var(--slds-g-color-warning-base-60, #fe9339);
+}
+
+.question-text {
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--slds-g-color-neutral-base-10, #181818);
+}
+
+/* Numbered marker. aria-hidden in the template: the position is decoration,
+   the question text is the accessible name of the input. */
+.slot-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--slds-g-color-neutral-base-30, #747474);
+    background: var(--slds-g-color-surface-container-3, #ecebea);
+}
+
+.slot-badge_answered {
+    color: var(--slds-g-color-on-accent-1, #ffffff);
+    background: var(--slds-g-color-success-base-50, #2e844a);
+}
+
+.progress-track {
+    height: 0.25rem;
+    border-radius: 0.125rem;
+    overflow: hidden;
+    background: var(--slds-g-color-surface-container-3, #ecebea);
+}
+
+.progress-fill {
+    height: 100%;
+    border-radius: 0.125rem;
+    background: var(--slds-g-color-success-base-50, #2e844a);
+    transition: width 0.25s ease;
+}
+
+.unsaved-pill {
+    padding: 0.0625rem 0.5rem;
+    border-radius: 0.75rem;
+    font-size: 0.75rem;
+    color: var(--slds-g-color-warning-base-10, #8c4b02);
+    background: var(--slds-g-color-warning-container-1, #fef1e4);
+}
+
+.char-counter {
+    margin-top: 0.125rem;
+    color: var(--slds-g-color-neutral-base-30, #747474);
+}
+
+.empty-state {
+    border: 1px dashed var(--slds-g-color-border-base-2, #c9c9c9);
+    border-radius: 0.25rem;
+    color: var(--slds-g-color-neutral-base-30, #747474);
+}
+
+/* The card body is the positioning context for the spinner. Without a
+   positioned ancestor lightning-spinner escapes and covers the whole page. */
+.slds-is-relative {
+    min-height: 3rem;
+}

@@ -1,0 +1,166 @@
+<template>
+    <lightning-card icon-name="standard:question_feed">
+        <h1 slot="title" class="slds-text-heading_small">
+            Matter Questions
+            <template lwc:if={matterLabel}>
+                <span class="matter-badge slds-m-left_x-small">{matterLabel}</span>
+            </template>
+        </h1>
+
+        <div slot="actions" class="slds-button-group" role="group">
+            <lightning-button
+                variant="neutral"
+                label="Get Matter Specific Questions"
+                icon-name="utility:refresh"
+                disabled={isLoadDisabled}
+                onclick={handleLoadQuestions}></lightning-button>
+            <lightning-button
+                variant="brand"
+                label="Save"
+                icon-name="utility:save"
+                disabled={isSaveDisabled}
+                onclick={handleSave}></lightning-button>
+        </div>
+
+        <div class="slds-is-relative slds-var-p-horizontal_medium slds-var-p-bottom_medium">
+            <template lwc:if={isBusy}>
+                <lightning-spinner
+                    alternative-text={busyMessage}
+                    size="small"
+                    variant="brand"></lightning-spinner>
+            </template>
+
+            <!-- Screen readers get told what changed; sighted users see the UI. -->
+            <div class="slds-assistive-text" aria-live="polite">{statusMessage}</div>
+
+            <!-- Blocking state: no Matter Type, so there is nothing to look up. -->
+            <template lwc:if={showMatterTypePrompt}>
+                <div class="slds-box slds-box_x-small slds-theme_warning slds-var-m-top_small">
+                    <lightning-icon
+                        icon-name="utility:warning"
+                        size="x-small"
+                        variant="inverse"
+                        alternative-text="Warning"
+                        class="slds-var-m-right_x-small"></lightning-icon>
+                    <span>
+                        Set a <strong>Matter Type</strong> on this Lead to load its
+                        matter specific questions.
+                    </span>
+                </div>
+            </template>
+
+            <!-- Error state: inline, because toasts are missed and dismissed. -->
+            <template lwc:if={errorMessage}>
+                <div class="slds-box slds-box_x-small slds-theme_error slds-var-m-top_small" role="alert">
+                    <lightning-icon
+                        icon-name="utility:error"
+                        size="x-small"
+                        variant="inverse"
+                        alternative-text="Error"
+                        class="slds-var-m-right_x-small"></lightning-icon>
+                    <span>{errorMessage}</span>
+                </div>
+            </template>
+
+            <!-- Read-only state: the user cannot edit the answer fields. -->
+            <template lwc:if={showReadOnlyNotice}>
+                <div class="slds-box slds-box_x-small slds-theme_shade slds-var-m-top_small">
+                    <lightning-icon
+                        icon-name="utility:lock"
+                        size="x-small"
+                        alternative-text="Read only"
+                        class="slds-var-m-right_x-small"></lightning-icon>
+                    <span>You have read only access to these answers.</span>
+                </div>
+            </template>
+
+            <template lwc:if={hasQuestions}>
+                <!-- Answered-count meter: the one number a reviewer wants at a glance. -->
+                <div class="progress-row slds-var-m-top_small slds-var-m-bottom_medium">
+                    <div class="slds-grid slds-grid_align-spread slds-var-m-bottom_xx-small">
+                        <span class="slds-text-body_small slds-text-color_weak">
+                            {answeredCount} of {questionCount} answered
+                        </span>
+                        <template lwc:if={isDirty}>
+                            <span class="unsaved-pill">Unsaved changes</span>
+                        </template>
+                    </div>
+                    <div
+                        class="progress-track"
+                        role="progressbar"
+                        aria-label="Questions answered"
+                        aria-valuemin="0"
+                        aria-valuemax={questionCount}
+                        aria-valuenow={answeredCount}>
+                        <div class="progress-fill" style={progressStyle}></div>
+                    </div>
+                </div>
+
+                <ul class="slds-has-dividers_bottom-space question-list">
+                    <template for:each={questions} for:item="row">
+                        <li key={row.slot} class={row.itemClass}>
+                            <div class="slds-grid slds-gutters_x-small slds-wrap">
+                                <div class="slds-col slds-no-flex">
+                                    <span class={row.badgeClass} aria-hidden="true">
+                                        {row.slot}
+                                    </span>
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_5-of-12">
+                                    <p class="question-text">{row.question}</p>
+                                    <template lwc:if={row.isUnanswered}>
+                                        <span class="slds-text-body_small slds-text-color_weak">
+                                            Not answered yet
+                                        </span>
+                                    </template>
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12">
+                                    <!-- The question is the field's label, so the
+                                         input is announced with its question rather
+                                         than sitting next to unassociated text. -->
+                                    <lightning-textarea
+                                        data-slot={row.slot}
+                                        label={row.question}
+                                        variant="label-hidden"
+                                        placeholder="Type the answer"
+                                        value={row.answer}
+                                        max-length={answerMaxLength}
+                                        message-when-too-long={tooLongMessage}
+                                        disabled={isReadOnly}
+                                        class="answer-input"
+                                        onchange={handleAnswerChange}></lightning-textarea>
+                                    <template lwc:if={row.showCounter}>
+                                        <p class="slds-text-body_small slds-text-align_right char-counter">
+                                            {row.remaining} characters left
+                                        </p>
+                                    </template>
+                                </div>
+                            </div>
+                        </li>
+                    </template>
+                </ul>
+            </template>
+
+            <!-- Empty state: a Matter Type is set but nothing has been loaded. -->
+            <template lwc:if={showEmptyState}>
+                <div class="empty-state slds-var-m-top_small slds-var-p-around_large slds-text-align_center">
+                    <lightning-icon
+                        icon-name="utility:questions_and_answers"
+                        size="small"
+                        alternative-text=""
+                        class="slds-var-m-bottom_small"></lightning-icon>
+                    <p class="slds-text-heading_small">No questions on this Lead yet</p>
+                    <p class="slds-text-body_small slds-text-color_weak slds-var-m-top_xx-small">
+                        Choose <strong>Get Matter Specific Questions</strong> to load the
+                        set configured for {matterLabel}.
+                    </p>
+                </div>
+            </template>
+        </div>
+
+        <template lwc:if={hasQuestions}>
+            <div slot="footer" class="slds-text-body_small slds-text-color_weak">
+                {footerMessage}
+            </div>
+        </template>
+    </lightning-card>
+</template>
