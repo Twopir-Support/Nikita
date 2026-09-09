@@ -1,4 +1,12 @@
 package.xml
+
+# Jest lives beside the component but is never deployed. Without this the
+# platform tries to compile the test file as part of the bundle and rejects
+# `import { createElement } from 'lwc'` with LWC1702.
+**/__tests__/**
+**/jest-mocks/**
+**/*.test.js
+
 **/jsconfig.json
 **/.eslintrc.json
 .sfdx

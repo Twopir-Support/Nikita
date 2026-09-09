@@ -39,7 +39,7 @@ jobs:
           ./pmd-bin-7.7.0/bin/pmd check \
             -d force-app/main/default/classes \
             -R config/pmd-apex-ruleset.xml \
-            -f github --no-progress
+            -f text --no-progress
 
   validate:
     name: Validate against org
