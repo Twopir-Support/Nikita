@@ -1,8 +1,8 @@
 /**
  * Tests for LeadQAController.
  *
- * Lead_Question__mdt records cannot be inserted in a test, so the controller
- * exposes a `mockQuestionConfigs` seam. Configuring it in-memory keeps these
+ * Lead_Question__mdt records cannot be inserted in a test, so the question
+ * selector exposes a `mockConfigs` seam. Configuring it in-memory keeps these
  * tests deterministic and independent of whatever metadata a given sandbox
  * happens to contain -- the same reason SeeAllData is never used.
  */
@@ -174,7 +174,7 @@ private class LeadQAControllerTest {
     @IsTest
     static void getMatterQuestions_configuredType_returnsConfiguredQuestions() {
         Lead record = newLead(TYPE_B, null);
-        LeadQAController.mockQuestionConfigs =
+        LeadQuestionSelector.mockConfigs =
             new List<Lead_Question__mdt>{ config(TYPE_B, null, 4) };
 
         Test.startTest();
@@ -195,7 +195,7 @@ private class LeadQAControllerTest {
     @IsTest
     static void getMatterQuestions_subTypeConfigured_prefersSubTypeOverType() {
         Lead record = newLead(TYPE_A, SUB_A);
-        LeadQAController.mockQuestionConfigs = new List<Lead_Question__mdt>{
+        LeadQuestionSelector.mockConfigs = new List<Lead_Question__mdt>{
             config(TYPE_A, null, 2),
             config(TYPE_A, SUB_A, 5)
         };
@@ -211,7 +211,7 @@ private class LeadQAControllerTest {
     @IsTest
     static void getMatterQuestions_subTypeNotConfigured_fallsBackToMatterType() {
         Lead record = newLead(TYPE_A, SUB_B);
-        LeadQAController.mockQuestionConfigs =
+        LeadQuestionSelector.mockConfigs =
             new List<Lead_Question__mdt>{ config(TYPE_A, null, 3) };
 
         Test.startTest();
@@ -228,7 +228,7 @@ private class LeadQAControllerTest {
             return; // This org's Sub Type picklist has no "N/A" value to test with.
         }
         Lead record = newLead(TYPE_A, 'N/A');
-        LeadQAController.mockQuestionConfigs =
+        LeadQuestionSelector.mockConfigs =
             new List<Lead_Question__mdt>{ config(TYPE_A, null, 2) };
 
         Test.startTest();
@@ -248,7 +248,7 @@ private class LeadQAControllerTest {
         record.Answer_2__c = 'Drop me';
         update record;
 
-        LeadQAController.mockQuestionConfigs =
+        LeadQuestionSelector.mockConfigs =
             new List<Lead_Question__mdt>{ config(TYPE_A, null, 2) };
 
         Test.startTest();
@@ -288,7 +288,7 @@ private class LeadQAControllerTest {
     @IsTest
     static void getMatterQuestions_noConfigForType_throwsActionableError() {
         Lead record = newLead(TYPE_A, null);
-        LeadQAController.mockQuestionConfigs = new List<Lead_Question__mdt>();
+        LeadQuestionSelector.mockConfigs = new List<Lead_Question__mdt>();
 
         Test.startTest();
         try {
@@ -310,7 +310,7 @@ private class LeadQAControllerTest {
     @IsTest
     static void saveAnswers_writesQuestionsAndAnswers() {
         Lead record = newLead(TYPE_B, null);
-        LeadQAController.mockQuestionConfigs =
+        LeadQuestionSelector.mockConfigs =
             new List<Lead_Question__mdt>{ config(TYPE_B, null, 3) };
         LeadQAController.LeadQAContext draft =
             LeadQAController.getMatterQuestions(record.Id);
@@ -337,7 +337,7 @@ private class LeadQAControllerTest {
         // The reported defect: switch a Lead from a 10 question matter type to a
         // 4 question one and the six leftover questions and answers must be gone.
         Lead record = newLead(TYPE_A, null);
-        LeadQAController.mockQuestionConfigs =
+        LeadQuestionSelector.mockConfigs =
             new List<Lead_Question__mdt>{ config(TYPE_A, null, 10) };
         LeadQAController.saveAnswers(
             record.Id,
@@ -346,7 +346,7 @@ private class LeadQAControllerTest {
 
         record.Matter_Type__c = TYPE_B;
         update record;
-        LeadQAController.mockQuestionConfigs =
+        LeadQuestionSelector.mockConfigs =
             new List<Lead_Question__mdt>{ config(TYPE_B, null, 4) };
 
         Test.startTest();
@@ -372,7 +372,7 @@ private class LeadQAControllerTest {
     @IsTest
     static void saveAnswers_blankAnswer_storesQuestionWithNullAnswer() {
         Lead record = newLead(TYPE_B, null);
-        LeadQAController.mockQuestionConfigs =
+        LeadQuestionSelector.mockConfigs =
             new List<Lead_Question__mdt>{ config(TYPE_B, null, 2) };
         LeadQAController.LeadQAContext draft =
             LeadQAController.getMatterQuestions(record.Id);
@@ -510,7 +510,7 @@ private class LeadQAControllerTest {
         Lead record = newLead(TYPE_B, null);
         List<LeadQAController.QuestionAnswer> rows =
             new List<LeadQAController.QuestionAnswer>();
-        for (Integer i = 1; i <= LeadQAController.MAX_SLOTS + 1; i++) {
+        for (Integer i = 1; i <= LeadQASchema.MAX_SLOTS + 1; i++) {
             rows.add(new LeadQAController.QuestionAnswer(i, 'Question ' + i, 'a'));
         }
 
@@ -537,8 +537,8 @@ private class LeadQAControllerTest {
         // DML cost is fixed, not proportional to the number of questions. A 15
         // question save must cost exactly what a 1 question save costs.
         Lead record = newLead(TYPE_B, null);
-        LeadQAController.mockQuestionConfigs = new List<Lead_Question__mdt>{
-            config(TYPE_B, null, LeadQAController.MAX_SLOTS)
+        LeadQuestionSelector.mockConfigs = new List<Lead_Question__mdt>{
+            config(TYPE_B, null, LeadQASchema.MAX_SLOTS)
         };
         LeadQAController.LeadQAContext draft =
             LeadQAController.getMatterQuestions(record.Id);
@@ -555,7 +555,7 @@ private class LeadQAControllerTest {
         Assert.areEqual(2, queriesUsed, 'Saving 15 questions should cost 2 queries');
         Assert.areEqual(1, dmlUsed, 'Saving 15 questions should cost 1 DML statement');
         Assert.areEqual(
-            LeadQAController.MAX_SLOTS,
+            LeadQASchema.MAX_SLOTS,
             [SELECT COUNT() FROM Lead WHERE Id = :record.Id AND Answer_15__c != NULL],
             'Every slot should have been written'
         );

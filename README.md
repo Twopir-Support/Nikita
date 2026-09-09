@@ -8,7 +8,9 @@ keyed by `Matter_Type__c` and an optional `Sub_Type__c`.
 
 | Piece | What it is |
 |---|---|
-| `LeadQAController` | `with sharing` Apex controller. Reads, resolves and saves the questionnaire. |
+| `LeadQAController` | `with sharing` Apex controller. The three `@AuraEnabled` entry points, assembly and validation. |
+| `LeadQASchema` | Resolves the 15 slot fields against the Lead describe, once per transaction. |
+| `LeadQuestionSelector` | Finds the `Lead_Question__mdt` record that applies to a matter. |
 | `LeadQAControllerTest` | 22 tests: happy path, reset semantics, validation, limits, permissions. |
 | `leadQuestionAnswer` | The LWC. Drop it on the Lead Lightning Record Page. |
 
@@ -93,15 +95,21 @@ skipped unless an `SFDX_AUTH_URL` repository secret is set — get one with
 `sf org display --verbose --json` against the target sandbox and read
 `result.sfdxAuthUrl`.
 
-### Known static-analysis deviations
+### Static analysis
 
-PMD reports `LeadQAController` at a cognitive complexity of 77 against a
-threshold of 50, and `validateRow` at a cyclomatic complexity of 11 against 10.
-Neither is suppressed. The class is cohesive and every method is small — the
-count is the sum of many short methods, not one long one. If it needs to come
-down, the honest fix is to extract the schema introspection (the static
-initialiser and the field maps) into a `LeadQASchema` class, not to raise the
-threshold.
+PMD 7.7.0 runs clean. Two things are worth knowing about how it is configured,
+both spelled out with their reasoning in `config/pmd-apex-ruleset.xml`:
+
+- **Cyclomatic complexity is enforced per method (at 10), not per class.** The
+  class-level aggregate sums every method, so it grows with method count no
+  matter how simple each one is, and for a test class it is close to a count of
+  test scenarios. `CognitiveComplexity`, which weights nesting instead, *is*
+  enforced at class level and passes.
+- **Three findings are suppressed at the point they occur**, each with the
+  reason next to it: `ApexCRUDViolation` on the Custom Metadata query (CMDT
+  carries no CRUD or FLS), `AvoidDebugStatements` on the one diagnostic in
+  `userFacing`, and `EmptyStatementBlock` on the constructor the platform needs
+  to deserialise the LWC payload.
 
 `Lead_Question__mdt` records cannot be inserted in a test, so the controller
 exposes a `@TestVisible mockQuestionConfigs` seam and the tests configure
